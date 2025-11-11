@@ -50,6 +50,25 @@
     -fx-background-color: #666;
     -fx-opacity: 0.5;
 }
+.main-menu-button {
+    -fx-background-color: linear-gradient(to bottom, #2196F3, #1976D2);
+    -fx-text-fill: white;
+    -fx-background-radius: 20px;
+    -fx-padding: 10px 25px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 8, 0.3, 0, 2);
+}
+
+.main-menu-button:hover {
+    -fx-background-color: linear-gradient(to bottom, #1976D2, #1565C0);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.main-menu-button:disabled {
+    -fx-background-color: #666;
+    -fx-opacity: 0.5;
+}
 
 .game-area {
     -fx-background-color: rgba(26, 71, 42, 0.6);

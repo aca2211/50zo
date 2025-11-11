@@ -52,12 +52,22 @@
                 </Label>
             </VBox>
 
-            <Button fx:id="btnNewGame" disable="true" onAction="#handleNewGame"
-                    styleClass="new-game-button" text="New Game">
-                <font>
-                    <Font size="14.0"/>
-                </font>
-            </Button>
+            <!-- Botones de control -->
+            <HBox spacing="10.0" alignment="CENTER">
+                <Button fx:id="btnMainMenu" disable="true" onAction="#handleMainMenu"
+                        styleClass="main-menu-button" text="Main Menu">
+                    <font>
+                        <Font size="14.0"/>
+                    </font>
+                </Button>
+
+                <Button fx:id="btnNewGame" disable="true" onAction="#handleNewGame"
+                        styleClass="new-game-button" text="New Game">
+                    <font>
+                        <Font size="14.0"/>
+                    </font>
+                </Button>
+            </HBox>
         </HBox>
     </top>
 
