@@ -22,7 +22,7 @@ public class WelcomeStage extends Stage {
      */
     public WelcomeStage() throws IOException {
         FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/fxml/welcome-view.fxml")
+                getClass().getResource("/com/example/a50zo/fxml/welcome-view.fxml")
         );
         Parent root = loader.load();
 
