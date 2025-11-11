@@ -148,6 +148,51 @@ public class GameController {
         updatePlayerHand();
         updateMachinePlayersDisplay();
         updateGameInfo();
+
+        // NUEVO: Verificar si el jugador humano puede jugar
+        if (gameModel.getCurrentPlayer() instanceof HumanPlayer && !isProcessingTurn) {
+            checkHumanPlayerCanPlay();
+        }
+    }
+    /**
+     * Checks if the human player can make any valid move.
+     * If not, eliminates the player automatically.
+     */
+    private void checkHumanPlayerCanPlay() {
+        HumanPlayer humanPlayer = gameModel.getHumanPlayer();
+
+        if (!humanPlayer.isEliminated() && !humanPlayer.hasValidMove(gameModel.getTableSum())) {
+            // El jugador humano no tiene movimientos válidos
+            Platform.runLater(() -> {
+                Alert.showWarning(
+                        "No Valid Moves!",
+                        "You're Eliminated!",
+                        "You have no cards that can be played without exceeding 50. You are eliminated from the game!"
+                );
+
+                try {
+                    isProcessingTurn = true;
+                    gameModel.eliminateCurrentPlayer();
+                    updateUI();
+
+                    if (gameModel.isGameOver()) {
+                        handleGameOver();
+                    } else {
+                        gameModel.nextTurn();
+                        updateUI();
+
+                        // Si el siguiente es máquina, iniciar su turno
+                        if (!(gameModel.getCurrentPlayer() instanceof HumanPlayer)) {
+                            startMachineTurn();
+                        }
+                    }
+                } catch (PlayerEliminatedException e) {
+                    // Ya manejado arriba
+                } finally {
+                    isProcessingTurn = false;
+                }
+            });
+        }
     }
 
     /**
@@ -202,8 +247,9 @@ public class GameController {
 
         // Add hover effect
         DropShadow shadow = new DropShadow();
-        shadow.setColor(Color.GOLD);
         shadow.setRadius(15);
+
+        boolean canPlay = card.canBePlayed(gameModel.getTableSum());
 
         cardView.setOnMouseEntered(e -> {
             if (!isProcessingTurn && gameModel.getCurrentPlayer() instanceof HumanPlayer) {
@@ -211,7 +257,7 @@ public class GameController {
                 cardView.setTranslateY(-10);
 
                 // Show if card can be played
-                if (card.canBePlayed(gameModel.getTableSum())) {
+                if (canPlay) {
                     shadow.setColor(Color.LIGHTGREEN);
                 } else {
                     shadow.setColor(Color.LIGHTCORAL);
@@ -227,8 +273,14 @@ public class GameController {
         // Handle card click
         cardView.setOnMouseClicked(e -> handleCardPlay(card));
 
+        // Visual indicator if card cannot be played
+        if (!canPlay) {
+            cardView.setOpacity(0.6);
+        }
+
         return cardView;
     }
+
 
     /**
      * Handles when the human player clicks a card to play it.
@@ -245,10 +297,40 @@ public class GameController {
             return;
         }
 
+        // Verificar si el jugador puede jugar CUALQUIER carta
+        if (!gameModel.getHumanPlayer().hasValidMove(gameModel.getTableSum())) {
+            Alert.showWarning(
+                    "No Valid Moves",
+                    "You're Eliminated!",
+                    "You cannot play any card. You will be eliminated!"
+            );
+            return;
+        }
+
+        // Verificar si ESTA carta específica puede jugarse
+        if (!card.canBePlayed(gameModel.getTableSum())) {
+            Alert.showWarning(
+                    "Invalid Card",
+                    "Cannot Play This Card",
+                    "This card would make the sum exceed 50. Choose another card!"
+            );
+            return;
+        }
+
         try {
             isProcessingTurn = true;
+
+            // Guardar la carta antes de jugarla
+            int oldSum = gameModel.getTableSum();
+
             gameModel.getHumanPlayer().playCard(card, gameModel.getTableSum());
             gameModel.playCard(card);
+
+            int newSum = gameModel.getTableSum();
+
+            // Mostrar información de la jugada
+            System.out.println("Played: " + card.toString() + " | Old sum: " + oldSum + " → New sum: " + newSum);
+
             gameModel.drawCard();
 
             updateUI();
