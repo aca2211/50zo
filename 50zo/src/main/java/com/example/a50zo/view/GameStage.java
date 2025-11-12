@@ -25,7 +25,7 @@ public class GameStage extends Stage {
      */
     public GameStage(int numberOfMachinePlayers) throws IOException {
         FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/fxml/game-view.fxml")
+                getClass().getResource("/com/example/a50zo/fxml/game-view.fxml")
         );
         Parent root = loader.load();
 
