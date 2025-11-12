@@ -30,6 +30,7 @@ public class WelcomeStage extends Stage {
         setScene(scene);
         setTitle("Cincuentazo - Welcome");
         setResizable(false);
+        setMaximized(true);
 
         // Center the stage on screen
         centerOnScreen();

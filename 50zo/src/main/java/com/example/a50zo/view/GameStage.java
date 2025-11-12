@@ -36,6 +36,7 @@ public class GameStage extends Stage {
         setScene(scene);
         setTitle("Cincuentazo - Game");
         setResizable(false);
+        setMaximized(true);
 
         // Handle window close
         setOnCloseRequest(event -> {
