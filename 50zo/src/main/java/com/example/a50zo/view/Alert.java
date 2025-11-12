@@ -35,7 +35,7 @@ public class Alert extends javafx.scene.control.Alert {
     private void styleDialog() {
         DialogPane dialogPane = getDialogPane();
         dialogPane.getStylesheets().add(
-                getClass().getResource("/css/game-style.css").toExternalForm()
+                getClass().getResource("/com/example/a50zo/css/game-style.css").toExternalForm()
         );
         dialogPane.getStyleClass().add("custom-alert");
     }

@@ -6,7 +6,7 @@
 <?import javafx.scene.text.*?>
 
 <VBox alignment="CENTER" spacing="30.0" styleClass="welcome-container"
-      stylesheets="/css/welcome-style.css"
+      stylesheets="@../css/welcome-style.css"
       xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.a50zo.controller.WelcomeController">
