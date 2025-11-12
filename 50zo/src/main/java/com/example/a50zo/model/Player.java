@@ -1,6 +1,4 @@
 package com.example.a50zo.model;
-
-import com.example.a50zo.exceptions.EmptyDeckException;
 import com.example.a50zo.exceptions.InvalidCardPlayException;
 
 import java.util.ArrayList;
