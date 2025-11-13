@@ -87,11 +87,15 @@ public class GameModel {
             throw new InvalidCardPlayException("Playing this card would exceed 50");
         }
 
+        // Remover carta de la mano del jugador
         currentPlayer.removeCardFromHand(card);
+
+        // Agregar carta a la mesa
         tablePile.add(card);
+
+        // Actualizar suma
         tableSum += card.getBestValue(tableSum - card.getBestValue(tableSum));
     }
-
     /**
      * Current player draws a card from the deck.
      * Replenishes deck from table pile if necessary.
@@ -120,8 +124,18 @@ public class GameModel {
      * Skips eliminated players and checks for game over condition.
      */
     public void nextTurn() {
+        int attempts = 0;
+        int maxAttempts = players.size();
+
         do {
             currentPlayerIndex = (currentPlayerIndex + 1) % players.size();
+            attempts++;
+
+            // Evitar bucle infinito
+            if (attempts > maxAttempts) {
+                checkGameOver();
+                return;
+            }
         } while (getCurrentPlayer().isEliminated() && getActivePlayers().size() > 1);
 
         checkGameOver();
@@ -143,25 +157,29 @@ public class GameModel {
 
             checkGameOver();
 
-            if (!gameOver) {
-                nextTurn();
-            }
-
             throw new PlayerEliminatedException(player.getName() + " has been eliminated!");
         }
     }
-
     /**
      * Checks if the game is over (only one player remains).
      */
     private void checkGameOver() {
         List<Player> activePlayers = getActivePlayers();
+
+        System.out.println("[GameModel] Checking game over:");
+        System.out.println("  - Active players: " + activePlayers.size());
+        for (Player p : activePlayers) {
+            System.out.println("    * " + p.getName() + " (eliminated: " + p.isEliminated() + ")");
+        }
+
         if (activePlayers.size() == 1) {
             gameOver = true;
             winner = activePlayers.get(0);
+            System.out.println("  - GAME OVER! Winner: " + winner.getName());
+        } else {
+            System.out.println("  - Game continues");
         }
     }
-
     /**
      * Gets the list of active (non-eliminated) players.
      *

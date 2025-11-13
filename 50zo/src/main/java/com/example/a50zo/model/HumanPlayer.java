@@ -40,7 +40,7 @@ public class HumanPlayer extends Player {
     /**
      * Validates and plays a specific card from the hand.
      *
-     * @param card The card to play
+     * @param card       The card to play
      * @param currentSum The current sum on the table
      * @throws InvalidCardPlayException if the card cannot be played
      */
@@ -51,6 +51,6 @@ public class HumanPlayer extends Player {
         if (!card.canBePlayed(currentSum)) {
             throw new InvalidCardPlayException("Playing this card would exceed 50");
         }
-        removeCardFromHand(card);
+        // NO eliminar la carta aquí, se elimina en GameModel.playCard()
     }
 }

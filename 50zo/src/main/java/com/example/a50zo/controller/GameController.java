@@ -141,13 +141,35 @@ public class GameController {
         Player currentPlayer = gameModel.getCurrentPlayer();
         log("=== CHECK AND START TURN ===");
         log("Current player: " + currentPlayer.getName());
+        log("Player index: " + gameModel.getPlayers().indexOf(currentPlayer));
         log("Is human: " + (currentPlayer instanceof HumanPlayer));
-        log("Has valid moves: " + currentPlayer.hasValidMove(gameModel.getTableSum()));
+        log("Is eliminated: " + currentPlayer.isEliminated());
+        log("Table sum: " + gameModel.getTableSum());
+
+        // Si el jugador actual está eliminado, avanzar al siguiente
+        if (currentPlayer.isEliminated()) {
+            log("⚠️ Current player is eliminated, advancing turn");
+            gameModel.nextTurn();
+            checkAndStartTurn();
+            return;
+        }
+
+        // Verificar movimientos válidos
+        boolean hasValidMoves = currentPlayer.hasValidMove(gameModel.getTableSum());
+        log("Has valid moves: " + hasValidMoves);
+
+        if (!hasValidMoves) {
+            log("Current hand:");
+            for (Card card : currentPlayer.getHand()) {
+                int newSum = gameModel.getTableSum() + card.getBestValue(gameModel.getTableSum());
+                log("  - " + card + " would result in: " + newSum + " (can play: " + card.canBePlayed(gameModel.getTableSum()) + ")");
+            }
+        }
 
         if (currentPlayer instanceof HumanPlayer) {
             HumanPlayer humanPlayer = (HumanPlayer) currentPlayer;
 
-            if (!humanPlayer.isEliminated() && !humanPlayer.hasValidMove(gameModel.getTableSum())) {
+            if (!hasValidMoves) {
                 log("⚠️ Human player has NO valid moves - eliminating");
                 eliminateHumanPlayer();
             } else {
@@ -160,7 +182,6 @@ public class GameController {
             startMachineTurn();
         }
     }
-
     /**
      * Elimina al jugador humano cuando no tiene movimientos válidos
      */
@@ -173,58 +194,73 @@ public class GameController {
         humanEliminationChecked = true;
         isProcessingTurn = true;
 
-        // PRIMERO habilitar los botones
-        btnNewGame.setDisable(false);
-        btnMainMenu.setDisable(false);
+        try {
+            // Eliminar jugador
+            gameModel.eliminateCurrentPlayer();
+            log("Human player eliminated successfully");
 
-        Platform.runLater(() -> {
-            Alert.showWarning(
-                    "No Valid Moves!",
-                    "You're Eliminated!",
-                    "You have no cards that can be played without exceeding 50.\nYou are eliminated from the game!"
-            );
-
-            try {
-                gameModel.eliminateCurrentPlayer();
-                updateUI();
-
-                // CONFIRMAR que los botones siguen habilitados después de updateUI
-                btnNewGame.setDisable(false);
-                btnMainMenu.setDisable(false);
-
-                if (gameModel.isGameOver()) {
-                    handleGameOver();
-                } else {
-                    // Esperar un poco antes de continuar
-                    Thread continueThread = new Thread(() -> {
-                        try {
-                            Thread.sleep(2000);
-                            Platform.runLater(() -> {
-                                isProcessingTurn = false;
-
-                                // ASEGURAR que los botones siguen habilitados
-                                btnNewGame.setDisable(false);
-                                btnMainMenu.setDisable(false);
-
-                                checkAndStartTurn();
-                            });
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    });
-                    continueThread.setDaemon(true);
-                    continueThread.start();
-                }
-            } catch (PlayerEliminatedException e) {
-                log("Human player eliminated: " + e.getMessage());
-
-                // ASEGURAR botones habilitados incluso en excepción
-                btnNewGame.setDisable(false);
-                btnMainMenu.setDisable(false);
+            // Avanzar turno
+            if (!gameModel.isGameOver()) {
+                gameModel.nextTurn();
+                log("Turn advanced to: " + gameModel.getCurrentPlayer().getName());
             }
-        });
-    }
 
+        } catch (PlayerEliminatedException e) {
+            log("PlayerEliminatedException: " + e.getMessage());
+        }
+
+        // Actualizar UI
+        Platform.runLater(() -> updateUI());
+
+        // Mostrar alerta SIN BLOQUEAR
+        Thread alertThread = new Thread(() -> {
+            Platform.runLater(() -> {
+                Alert.showWarning(
+                        "No Valid Moves!",
+                        "You're Eliminated!",
+                        "You have no cards that can be played without exceeding 50.\nYou are eliminated from the game!"
+                );
+            });
+        });
+        alertThread.setDaemon(true);
+        alertThread.start();
+
+        if (gameModel.isGameOver()) {
+            log("Game Over - Final winner check");
+            Platform.runLater(() -> {
+                updateUI(); // Actualizar UI final
+                btnNewGame.setDisable(false);
+                btnMainMenu.setDisable(false);
+                handleGameOver();
+            });
+        } else {
+            // El juego continúa con las máquinas
+            log("=== GAME CONTINUES ===");
+            log("Active players: " + gameModel.getActivePlayers().size());
+            for (Player p : gameModel.getActivePlayers()) {
+                log("  - " + p.getName() + " (Hand: " + p.getHandSize() + " cards)");
+            }
+            log("Next player: " + gameModel.getCurrentPlayer().getName());
+
+            // Esperar y continuar en un thread separado
+            Thread continueThread = new Thread(() -> {
+                try {
+                    Thread.sleep(2500); // Dar tiempo para que se vea la alerta
+
+                    Platform.runLater(() -> {
+                        log("Resuming game after human elimination");
+                        isProcessingTurn = false;
+                        checkAndStartTurn();
+                    });
+
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            continueThread.setDaemon(true);
+            continueThread.start();
+        }
+    }
     /**
      * Sets up the machine player display areas based on count.
      *
@@ -313,8 +349,8 @@ public class GameController {
      */
     private ImageView createCardView(Card card) {
         ImageView cardView = new ImageView(imageLoader.getCardImage(card.getImageFileName()));
-        cardView.setFitWidth(100);
-        cardView.setFitHeight(140);
+        cardView.setFitWidth(85);  // Reducido de 100
+        cardView.setFitHeight(119); // Reducido de 140
         cardView.setPreserveRatio(true);
 
         // Add hover effect
@@ -353,7 +389,6 @@ public class GameController {
 
         return cardView;
     }
-
     /**
      * Handles when the human player clicks a card to play it.
      *
@@ -387,14 +422,30 @@ public class GameController {
         try {
             isProcessingTurn = true;
             int oldSum = gameModel.getTableSum();
+            int handSizeBefore = gameModel.getHumanPlayer().getHandSize();
 
+            log("=== HUMAN PLAYING CARD ===");
+            log("Hand size before: " + handSizeBefore);
+            log("Card to play: " + card);
+
+            // Jugar carta
             gameModel.getHumanPlayer().playCard(card, gameModel.getTableSum());
             gameModel.playCard(card);
 
             int newSum = gameModel.getTableSum();
             log("Human played: " + card + " | " + oldSum + " → " + newSum);
+            log("Hand size after play: " + gameModel.getHumanPlayer().getHandSize());
 
+            // Tomar carta del mazo
             gameModel.drawCard();
+            int handSizeAfter = gameModel.getHumanPlayer().getHandSize();
+            log("Hand size after draw: " + handSizeAfter);
+
+            if (handSizeAfter != 4) {
+                log("⚠️ WARNING: Hand size is " + handSizeAfter + " instead of 4!");
+            }
+
+            // Avanzar turno
             gameModel.nextTurn();
 
             updateUI();
@@ -426,7 +477,6 @@ public class GameController {
             isProcessingTurn = false;
         }
     }
-
     /**
      * Starts a machine player's turn in a separate thread.
      */
@@ -452,16 +502,23 @@ public class GameController {
      * Processes a machine player's turn.
      */
     private void processMachineTurn() {
+        log("=== PROCESS MACHINE TURN CALLED ===");
+        log("isProcessingTurn: " + isProcessingTurn);
+        log("gameModel.isGameOver(): " + gameModel.isGameOver());
+
         if (gameModel.isGameOver()) {
+            log("Game is over, calling handleGameOver");
             handleGameOver();
             return;
         }
 
         Player currentPlayer = gameModel.getCurrentPlayer();
         log("Machine turn: " + currentPlayer.getName());
+        log("Current player eliminated: " + currentPlayer.isEliminated());
+        log("Current player hand size: " + currentPlayer.getHandSize());
 
         if (!(currentPlayer instanceof MachinePlayer)) {
-            log("ERROR: Expected machine player");
+            log("ERROR: Expected machine player but got: " + currentPlayer.getClass().getName());
             isProcessingTurn = false;
             return;
         }
@@ -470,19 +527,30 @@ public class GameController {
             if (!currentPlayer.hasValidMove(gameModel.getTableSum())) {
                 log("Machine has no valid moves - eliminating");
 
+                String playerName = currentPlayer.getName();
+
+                // Eliminar jugador
+                gameModel.eliminateCurrentPlayer();
+
+                // Avanzar al siguiente turno DESPUÉS de eliminar
+                if (!gameModel.isGameOver()) {
+                    gameModel.nextTurn();
+                }
+
+                Platform.runLater(() -> updateUI());
+
+                // Mostrar alerta
                 Platform.runLater(() -> {
                     Alert.showInfo(
                             "Player Eliminated",
-                            currentPlayer.getName() + " Eliminated",
-                            currentPlayer.getName() + " has no valid moves!"
+                            playerName + " Eliminated",
+                            playerName + " has no valid moves and is eliminated!"
                     );
                 });
 
-                gameModel.eliminateCurrentPlayer();
-                updateUI();
-
                 Thread.sleep(1500);
 
+                // Continuar con el siguiente jugador
                 if (!gameModel.isGameOver()) {
                     Platform.runLater(() -> {
                         isProcessingTurn = false;
@@ -494,23 +562,28 @@ public class GameController {
                 return;
             }
 
+            // Seleccionar y jugar carta
             Card selectedCard = ((MachinePlayer) currentPlayer).selectCard(gameModel.getTableSum());
             int oldSum = gameModel.getTableSum();
             gameModel.playCard(selectedCard);
             int newSum = gameModel.getTableSum();
 
             log("Machine played: " + selectedCard + " | " + oldSum + " → " + newSum);
-
             Platform.runLater(() -> updateUI());
 
+            // Delay antes de tomar carta
             Random random = new Random();
             Thread.sleep(1000 + random.nextInt(1000));
 
+            // Tomar carta del mazo
             gameModel.drawCard();
-            gameModel.nextTurn();
+            log("Machine drew a card. Hand size: " + currentPlayer.getHandSize());
 
+            // Avanzar turno
+            gameModel.nextTurn();
             Platform.runLater(() -> updateUI());
 
+            // Verificar game over o continuar
             if (gameModel.isGameOver()) {
                 Platform.runLater(() -> handleGameOver());
             } else {
@@ -523,8 +596,25 @@ public class GameController {
         } catch (InvalidCardPlayException e) {
             log("Machine play failed: " + e.getMessage());
             try {
+                String playerName = currentPlayer.getName();
+
                 gameModel.eliminateCurrentPlayer();
+
+                if (!gameModel.isGameOver()) {
+                    gameModel.nextTurn();
+                }
+
                 Platform.runLater(() -> updateUI());
+
+                Platform.runLater(() -> {
+                    Alert.showInfo(
+                            "Player Eliminated",
+                            playerName + " Eliminated",
+                            playerName + " could not make a valid play!"
+                    );
+                });
+
+                Thread.sleep(1500);
 
                 if (!gameModel.isGameOver()) {
                     Platform.runLater(() -> {
@@ -536,21 +626,41 @@ public class GameController {
                 }
             } catch (PlayerEliminatedException pe) {
                 log("Machine eliminated: " + pe.getMessage());
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
             }
         } catch (PlayerEliminatedException e) {
-            log("Machine eliminated: " + e.getMessage());
+            log("Machine eliminated via exception: " + e.getMessage());
+            Platform.runLater(()->updateUI());
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            }
+
             Platform.runLater(() -> {
                 if (!gameModel.isGameOver()) {
                     isProcessingTurn = false;
                     checkAndStartTurn();
                 } else {
+                    updateUI();
                     handleGameOver();
                 }
             });
+        } catch (EmptyDeckException e) {
+            log("ERROR: Empty deck - " + e.getMessage());
+            Alert.showError("Error", "Deck Error", "Could not draw card: " + e.getMessage());
+            isProcessingTurn = false;
         } catch (Exception e) {
             log("ERROR: " + e.getMessage());
             e.printStackTrace();
             isProcessingTurn = false;
+
+            Platform.runLater(() -> {
+                if (!gameModel.isGameOver()) {
+                    checkAndStartTurn();
+                }
+            });
         }
     }
 
@@ -560,6 +670,9 @@ public class GameController {
     private void updateMachinePlayersDisplay() {
         List<Player> players = gameModel.getPlayers();
 
+        if (players.size() == 1) {
+            updateMachinePlayerDisplay(vboxMachine1,lblMachine1Status, players.get(0));
+        }
         if (players.size() > 1) {
             updateMachinePlayerDisplay(vboxMachine1, lblMachine1Status, players.get(1));
         }
@@ -603,7 +716,7 @@ public class GameController {
                 .orElse(null);
 
         if (cardBox == null) {
-            cardBox = new HBox(5);
+            cardBox = new HBox(4);  // Reducido de 5
             cardBox.setAlignment(Pos.CENTER);
             vbox.getChildren().add(cardBox);
         }
@@ -612,8 +725,8 @@ public class GameController {
 
         for (int i = 0; i < cardCount; i++) {
             ImageView cardBack = new ImageView(imageLoader.getCardBackImage());
-            cardBack.setFitWidth(60);
-            cardBack.setFitHeight(84);
+            cardBack.setFitWidth(50);  // Reducido de 60
+            cardBack.setFitHeight(70); // Reducido de 84
             cardBack.setPreserveRatio(true);
             cardBox.getChildren().add(cardBack);
         }
@@ -639,20 +752,57 @@ public class GameController {
      * Handles game over condition.
      */
     private void handleGameOver() {
+        log("=== HANDLE GAME OVER CALLED ===");
+        log("isProcessingTurn: " + isProcessingTurn);
+        log("gameModel.isGameOver(): " + gameModel.isGameOver());
+
         isProcessingTurn = true;
         Player winner = gameModel.getWinner();
 
-        String message = winner instanceof HumanPlayer
-                ? "🎉 Congratulations! You won!"
-                : "😔 " + winner.getName() + " wins!";
+        if (winner == null) {
+            log("ERROR: Game over but no winner found!");
+            log("Active players: " + gameModel.getActivePlayers().size());
+            for (Player p : gameModel.getActivePlayers()) {
+                log("  - " + p.getName() + " (eliminated: " + p.isEliminated() + ")");
+            }
+            return;
+        }
 
-        Alert.showInfo("Game Over", "Winner!", message);
+        log("Winner: " + winner.getName());
+        log("Winner type: " + winner.getClass().getSimpleName());
+
+        // IMPORTANTE: Actualizar UI antes de mostrar alerta para reflejar último estado
+        updateUI();
+
+        String title;
+        String header;
+        String message;
+
+        if (winner instanceof HumanPlayer) {
+            title = "🎉 VICTORY! 🎉";
+            header = "Congratulations!";
+            message = "You won the game! You're the last player standing!\n\nWell played! 🏆";
+        } else {
+            title = "Game Over";
+            header = winner.getName() + " Wins!";
+            message = winner.getName() + " is the winner!\n\nBetter luck next time! 🎮";
+        }
+
+        // Mostrar alerta en un thread separado para no bloquear UI
+        Thread alertThread = new Thread(() -> {
+            Platform.runLater(() -> {
+                Alert.showInfo(title, header, message);
+            });
+        });
+        alertThread.setDaemon(true);
+        alertThread.start();
 
         // Habilitar ambos botones al final del juego
         btnNewGame.setDisable(false);
         btnMainMenu.setDisable(false);
-    }
 
+        log("Buttons enabled - Game Over complete");
+    }
     /**
      * Handles new game button click.
      */
