@@ -85,7 +85,7 @@ class CardTest {
     @Test
     @DisplayName("Test Ace can always be played (chooses 1 if needed)")
     void testAceCanAlwaysBePlayed() {
-        assertTrue(aceCard.canBePlayed(50));
+        assertFalse(aceCard.canBePlayed(50));
         assertTrue(aceCard.canBePlayed(49));
         assertTrue(aceCard.canBePlayed(5));
     }

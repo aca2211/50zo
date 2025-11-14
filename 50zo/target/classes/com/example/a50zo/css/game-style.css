@@ -187,3 +187,57 @@
     50% { -fx-scale-x: 1.05; -fx-scale-y: 1.05; }
     100% { -fx-scale-x: 1; -fx-scale-y: 1; }
 }
+/* ScrollPane Styles */
+.game-scroll-pane {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+}
+
+.game-scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.game-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: rgba(0, 0, 0, 0.3);
+    -fx-pref-width: 12px;
+}
+
+.game-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(255, 215, 0, 0.6);
+    -fx-background-radius: 6px;
+}
+
+.game-scroll-pane .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(255, 215, 0, 0.8);
+}
+
+.game-scroll-pane .scroll-bar:vertical .track {
+    -fx-background-color: rgba(0, 0, 0, 0.2);
+    -fx-background-radius: 6px;
+}
+
+/* Adjusted styles for smaller screen */
+.player-area-container {
+    -fx-padding: 10px;
+}
+
+.machine-player-box {
+    -fx-padding: 10px;
+    -fx-min-width: 130px;
+}
+
+.table-center {
+    -fx-padding: 15px;
+}
+
+.card-container {
+    -fx-padding: 15px;
+}
+
+.sum-display {
+    -fx-padding: 10px 25px;
+}
+
+.player-hand-box {
+    -fx-min-height: 140px;
+}
